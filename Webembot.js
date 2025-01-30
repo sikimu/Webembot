@@ -1,4 +1,4 @@
-export class Embot {
+export class Webembot {
   static async create() {
     const uuid = (s) => `f7fc${s}-7a0b-4b89-a675-a79137223e2c`;
     const opt = {
@@ -11,7 +11,7 @@ export class Embot {
     const device = await navigator.bluetooth.requestDevice(opt);
     const server = await device.gatt.connect();
     const service = await server.getPrimaryService(uuid("e510"));
-    const embot = new Embot(device, server, service);
+    const embot = new Webembot(device, server, service);
     embot.leds = [
       await service.getCharacteristic(uuid("e515")),
       await service.getCharacteristic(uuid("e516")),
