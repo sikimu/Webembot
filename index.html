@@ -1,0 +1,37 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><link rel="icon" href="data:">
+<title>Webembot demo</title>
+</head><body>
+<h1>Webembot demo</h1>
+
+<button id=btnstart>接続</button><br>
+
+<script type="module">
+import { Embot } from "./Embot.js";
+import { sleep } from "https://js.sabae.cc/sleep.js";
+
+btnstart.onclick = async () => {
+  const embot = await Embot.create();
+  for (;;) {
+    await embot.led(1, true);
+    await embot.led(2, false);
+    await embot.servo(1, 30);
+    await embot.servo(2, 0);
+    await embot.servo(3, 0);
+    await embot.buzzer(61);
+    await sleep(1000);
+    await embot.led(1, false);
+    await embot.led(2, true);
+    await embot.servo(1, 0);
+    await embot.servo(2, 30);
+    await embot.servo(3, 30);
+    await embot.buzzer(Math.random() * 100);
+    await sleep(1000);
+  }
+};
+</script>
+
+<hr>
+<a href=https://github.com/code4fukui/Webembot/>src on GitHub</a>
+
+</body>
+</html>
