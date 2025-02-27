@@ -7,6 +7,7 @@ Webembot is a library for controlling <a href=https://www.embot.jp/>embot</a> ov
 <br>
 
 <button id=btnstart>connect and demo</button><br>
+<label><input type=checkbox id=chksound>sound on</label><br>
 
 
 <script type="module">
@@ -15,20 +16,40 @@ import { sleep } from "https://js.sabae.cc/sleep.js";
 
 btnstart.onclick = async () => {
   const emb = await Webembot.create();
+  /*
+  for (;;) {
+    for (let i = 1; i <= 6; i++) {
+      console.log(i);
+      await emb.led(i, true);
+      await sleep(1000);
+      await emb.led(i, false);
+    }
+  }
+  */
   for (;;) {
     await emb.led(1, true);
     await emb.led(2, false);
+    await emb.led(3, false);
     await emb.servo(1, 30);
     await emb.servo(2, 0);
     await emb.servo(3, 0);
-    await emb.buzzer(61);
+    if (chksound.checked) {
+      await emb.buzzer(61);
+    }  else {
+      await emb.buzzer(0);
+    }
     await sleep(1000);
     await emb.led(1, false);
     await emb.led(2, true);
+    await emb.led(3, true);
     await emb.servo(1, 0);
     await emb.servo(2, 30);
     await emb.servo(3, 30);
-    await emb.buzzer(Math.random() * 100);
+    if (chksound.checked) {
+      await emb.buzzer(Math.random() * 100);
+    }  else {
+      await emb.buzzer(0);
+    }
     await sleep(1000);
   }
 };
