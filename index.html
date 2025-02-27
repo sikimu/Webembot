@@ -3,7 +3,7 @@
 </head><body>
 <h1>Webembot demo</h1>
 
-Webembot is a library for controlling <a href=https://www.ebm.jp/>embot</a> over Bluetooth.<br>
+Webembot is a library for controlling <a href=https://www.embot.jp/>embot</a> over Bluetooth.<br>
 <br>
 
 <button id=btnstart>connect and demo</button><br>
@@ -16,19 +16,19 @@ import { sleep } from "https://js.sabae.cc/sleep.js";
 btnstart.onclick = async () => {
   const emb = await Webembot.create();
   for (;;) {
-    await ebm.led(1, true);
-    await ebm.led(2, false);
-    await ebm.servo(1, 30);
-    await ebm.servo(2, 0);
-    await ebm.servo(3, 0);
-    await ebm.buzzer(61);
+    await emb.led(1, true);
+    await emb.led(2, false);
+    await emb.servo(1, 30);
+    await emb.servo(2, 0);
+    await emb.servo(3, 0);
+    await emb.buzzer(61);
     await sleep(1000);
-    await ebm.led(1, false);
-    await ebm.led(2, true);
-    await ebm.servo(1, 0);
-    await ebm.servo(2, 30);
-    await ebm.servo(3, 30);
-    await ebm.buzzer(Math.random() * 100);
+    await emb.led(1, false);
+    await emb.led(2, true);
+    await emb.servo(1, 0);
+    await emb.servo(2, 30);
+    await emb.servo(3, 30);
+    await emb.buzzer(Math.random() * 100);
     await sleep(1000);
   }
 };

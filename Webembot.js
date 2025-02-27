@@ -11,7 +11,8 @@ export class Webembot {
     const device = await navigator.bluetooth.requestDevice(opt);
     const server = await device.gatt.connect();
     const service = await server.getPrimaryService(uuid("e510"));
-    const embot = new Webembot(device, server, service);
+    const plus = device.name.startsWith("EMBOTPLUS_");
+    const embot = new Webembot(device, server, service, plus);
     embot.leds = [
       await service.getCharacteristic(uuid("e515")),
       await service.getCharacteristic(uuid("e516")),
@@ -19,16 +20,19 @@ export class Webembot {
     embot.servos = [
       await service.getCharacteristic(uuid("e511")),
       await service.getCharacteristic(uuid("e512")),
-      await service.getCharacteristic(uuid("e513")),
     ];
+    if (plus) {
+      embot.servos.push(await service.getCharacteristic(uuid("e513")));
+    }
     embot.buzzer1 = await service.getCharacteristic(uuid("e521"));
     embot.other1 = await service.getCharacteristic(uuid("e525"));
     return embot;
   }
-  constructor(device, server, service) {
+  constructor(device, server, service, plus) {
     this.device = device;
     this.server = server;
     this.service = service;
+    this.plus = plus;
   }
   async writeBLE(char, val) {
     const buf = new Uint8Array(1);
@@ -42,6 +46,10 @@ export class Webembot {
   }
   async servo(id, val) { // id: 1-3, val: 0?
     if (id < 1 || id > 3) throw new Error("id must be 1 to 3");
+    if (!this.plus && id == 3) {
+      console.log("servo 3 is only embot+");
+      return;
+    }
     const target = this.servos[id - 1];
     await this.writeBLE(target, val);
   }
