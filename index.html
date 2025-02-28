@@ -8,6 +8,7 @@ Webembot is a library for controlling <a href=https://www.embot.jp/>embot</a> ov
 
 <button id=btnstart>connect and demo</button><br>
 <label><input type=checkbox id=chksound>sound on</label><br>
+F503i keystate <input type=text id=inkey style="width: 6em;"><br>
 
 
 <script type="module">
@@ -16,16 +17,24 @@ import { sleep } from "https://js.sabae.cc/sleep.js";
 
 btnstart.onclick = async () => {
   const emb = await Webembot.create();
+
   /*
   for (;;) {
     for (let i = 1; i <= 6; i++) {
-      console.log(i);
+      //console.log(i);
       await emb.led(i, true);
-      await sleep(1000);
+      await sleep(100);
       await emb.led(i, false);
+      const res = await emb.getBrightness();
+      console.log(res);
+      await emb.readAll();
+
     }
   }
   */
+  emb.addKeyEventListener((keystate) => {
+    inkey.value = keystate.toString(2);
+  });
   for (;;) {
     await emb.led(1, true);
     await emb.led(2, false);
