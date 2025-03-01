@@ -37,12 +37,12 @@ export class Webembot {
       console.log(ruuid(ch.uuid), show(ch.properties));
       /*
         // led
-        e515 read writeWithoutResponse
-        e516 read writeWithoutResponse
-        e517 read writeWithoutResponse
-        e518 read writeWithoutResponse
-        e51a read writeWithoutResponse // right RED
-        e51b read writeWithoutResponse
+        e515 read writeWithoutResponse // green (left)
+        e516 read writeWithoutResponse // yellow (center)
+        e517 read writeWithoutResponse // brightness green
+        e518 read writeWithoutResponse // brightness yellow
+        e51a read writeWithoutResponse // red (right)
+        e51b read writeWithoutResponse // brightness red
 
         // buzzer
         e521 read writeWithoutResponse
@@ -74,9 +74,9 @@ export class Webembot {
       embot.leds = [
         await service.getCharacteristic(uuid("e515")),
         await service.getCharacteristic(uuid("e516")),
+        await service.getCharacteristic(uuid("e51a")),
         await service.getCharacteristic(uuid("e517")),
         await service.getCharacteristic(uuid("e518")),
-        await service.getCharacteristic(uuid("e51a")),
         await service.getCharacteristic(uuid("e51b")),
       ];
     }
@@ -125,20 +125,20 @@ export class Webembot {
     buf[0] = parseInt(val);
     await char.writeValueWithoutResponse(buf.buffer);
   }
-  async led(id, val) { // id: 1 or 2, val: true or false
+  async ledn(id, val) { // id: 1-3, val: n
+    const target = this.leds[id - 1];
+    await this.writeBLE(target, val);
+  }
+  async led(id, val) { // id: 1-3, val: true or false
     if (id < 1 || id > this.leds.length) {
       console.log("led " + id + " is not supported");
       return;
     }
+    if (this.f503i) {
+      await this.writeBLE(this.leds[id - 1 + 3], 255);
+    }
     const target = this.leds[id - 1];
     await this.writeBLE(target, val ? 1 : 2);
-    /*
-    if (this.f503i) {
-      await this.writeBLE(target, val ? 1 : 0);
-    } else {
-      await this.writeBLE(target, val ? 1 : 2);
-    }
-    */
   }
   async servo(id, val) { // id: 1-3, val: 0?
     if (this.f503i) {
