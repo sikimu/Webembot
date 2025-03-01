@@ -1,0 +1,19 @@
+Webembot.js:38 e515 read writeWithoutResponse
+Webembot.js:38 e516 read writeWithoutResponse
+Webembot.js:38 e517 read writeWithoutResponse
+Webembot.js:38 e518 read writeWithoutResponse
+Webembot.js:38 e51a read writeWithoutResponse
+Webembot.js:38 e51b read writeWithoutResponse
+Webembot.js:38 e521 read writeWithoutResponse
+Webembot.js:38 e531 notify read
+Webembot.js:38 e532 notify read
+Webembot.js:38 e533 read write
+Webembot.js:38 e5e1 read
+Webembot.js:38 e5e2 read
+Webembot.js:38 e5e3 read
+Webembot.js:38 e5e4 read
+Webembot.js:83 光センサーの初期化を開始...
+Webembot.js:87 光センサーモードを設定しました
+(index):71 Uncaught (in promise) TypeError: emb.initLightSensor is not a function
+    at btnstart.onclick ((index):71:18)
+btnstart.onclick @ (index):71

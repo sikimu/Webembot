@@ -1,6 +1,7 @@
+const uuid = (s) => `f7fc${s}-7a0b-4b89-a675-a79137223e2c`;
+
 export class Webembot {
   static async create() {
-    const uuid = (s) => `f7fc${s}-7a0b-4b89-a675-a79137223e2c`;
     const ruuid = (uuid) => uuid.substring(4, 8);
     const opt = {
       optionalServices: [uuid("e510")],
@@ -74,25 +75,11 @@ export class Webembot {
         const ch = await service.getCharacteristic(uuid(i));
         embot.others.push(ch);
       }
-      for (const i of ["e531", "e532"]) {
+      for (const i of ["e531"]) {
         const ch = await service.getCharacteristic(uuid(i));
-        if (i === "e532") {
-          // 光センサーの初期化（f503iの場合のみ）
-          try {
-            console.log('光センサーの初期化を開始...');
-            const buf = new Uint8Array(1);
-            buf[0] = 2;  // モード2：連続読み取りモード
-            await ch.writeValueWithoutResponse(buf.buffer);
-            console.log('光センサーモードを設定しました');
-          } catch (error) {
-            console.error('光センサー初期化エラー:', error.name, error.message);
-          }
-        }
         ch.addEventListener('characteristicvaluechanged', async e => {
           const data = new Uint8Array(e.target.value.buffer);
           const n = (data[1] << 8) | data[0]; // data.length == 2
-          // LSMから 0-9*#
-          //console.log('recv', i, n.toString(2)); // data.length, data);
           embot.setKeyState(n);
         });
         await ch.startNotifications();
@@ -207,6 +194,35 @@ export class Webembot {
       }
     }
   }
+  async initLightSensor() {
+    if (!this.f503i) {
+      console.log('このデバイスは光センサーに対応していません');
+      return false;
+    }
+
+    try {
+      const ch = await this.service.getCharacteristic(uuid("e532"));
+      console.log('光センサーの初期化を開始...');
+      const buf = new Uint8Array(1);
+      buf[0] = 2;  // モード2：連続読み取りモード
+      await ch.writeValueWithoutResponse(buf.buffer);
+      
+      ch.addEventListener('characteristicvaluechanged', async e => {
+        const data = new Uint8Array(e.target.value.buffer);
+        const brightness = (data[1] << 8) | data[0];
+        console.log('光センサー値:', brightness);
+        this.lightValue = brightness;  // 光センサー値を保存
+      });
+      await ch.startNotifications();
+      
+      console.log('光センサーモードを設定しました');
+      return true;
+    } catch (error) {
+      console.error('光センサー初期化エラー:', error.name, error.message);
+      return false;
+    }
+  }
+
   async getBrightness() {
     if (!this.f503i) {
       console.log('このデバイスは光センサーに対応していません');
@@ -219,8 +235,8 @@ export class Webembot {
     }
 
     try {
-      // まず光センサー（e5e4）を取得
-      const lightSensor = await this.service.getCharacteristic(uuid("e5e4"));
+      // 光センサー（e532）を取得
+      const lightSensor = await this.service.getCharacteristic(uuid("e532"));
       console.log('光センサー特性を取得しました');
 
       // 値を読み取る
@@ -240,21 +256,21 @@ export class Webembot {
         };
       }
 
-      // 第1バイトが光の強さを示す（0-255）
-      const brightness = n[0];
+      // 2バイトを結合して値を取得
+      const brightness = (n[1] << 8) | n[0];
       console.log('光の強さ:', brightness);
       
       // 明るさレベルの判定
       let level;
-      if (brightness < 50) level = '非常に暗い';
-      else if (brightness < 100) level = '暗い';
-      else if (brightness < 150) level = 'やや暗い';
-      else if (brightness < 200) level = '明るい';
+      if (brightness < 100) level = '非常に暗い';
+      else if (brightness < 250) level = '暗い';
+      else if (brightness < 400) level = 'やや暗い';
+      else if (brightness < 600) level = '明るい';
       else level = '非常に明るい';
 
       return {
-        raw: Array.from(n),    // 生データ [光の強さ, 11]
-        brightness: n[0],      // 光の強さ（0-255）
+        raw: Array.from(n),    // 生データ [下位8ビット, 上位8ビット]
+        brightness: brightness, // 光の強さ
         level,                 // 人間が理解しやすい表現
         error: null           // エラーなし
       };
