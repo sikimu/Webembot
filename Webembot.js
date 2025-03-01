@@ -109,8 +109,11 @@ export class Webembot {
   }
 
   async writeCharacteristic(shortUuid, value) {
-    const characteristics = await this.service.getCharacteristics();
-    const characteristic = characteristics.find(ch => ch.uuid.substring(4, 8) === shortUuid);
+    // キャッシュされた特性を使用
+    if (!this._characteristics) {
+      this._characteristics = await this.service.getCharacteristics();
+    }
+    const characteristic = this._characteristics.find(ch => ch.uuid.substring(4, 8) === shortUuid);
     
     if (!characteristic) {
       throw new Error(`特性が見つかりません: ${shortUuid}`);
@@ -120,7 +123,13 @@ export class Webembot {
       throw new Error(`この特性は書き込みをサポートしていません: ${shortUuid}`);
     }
 
-    const data = new Uint8Array([parseInt(value)]);
-    await characteristic.writeValue(data);
+    // ブザー用の特別な処理
+    if (shortUuid === 'e521') {
+      const data = new Uint8Array([parseInt(value)]);
+      return characteristic.writeValueWithoutResponse(data);
+    } else {
+      const data = new Uint8Array([parseInt(value)]);
+      await characteristic.writeValue(data);
+    }
   }
 }
