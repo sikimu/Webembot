@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><link rel="icon" href="data:">
-<title>Webembot demo</title>
+<title>Webembot</title>
 <style>
   .uuid-table {
     border-collapse: collapse;
@@ -24,13 +24,18 @@
   }
 </style>
 </head><body>
-<h1>Webembot demo</h1>
+<h1>Webembot</h1>
 
 Webembot is a library for controlling <a href=https://www.embot.jp/>embot</a> over Bluetooth. (<a href="uuids.html">Bluetooth UUIDs一覧</a>)<br>
 <br>
 
-<button id=btnstart>connect and demo</button>
+<button id=btnstart>デバイスに接続</button>
 <button id="btnShowUuids" disabled>Show UUIDs</button><br>
+<div id="ledTest" style="margin-top: 10px; display: none;">
+  <button id="led1">LED1 ON/OFF</button>
+  <button id="led2">LED2 ON/OFF</button>
+  <button id="led3">LED3 ON/OFF</button>
+</div><br>
 <label><input type=checkbox id=chksound>sound on</label><br>
 F503i keystate <input type=text id=inkey style="width: 6em;"><br>
 光センサー値: <span id="brightness">---</span> (<span id="brightLevel">---</span>)<br>
@@ -61,6 +66,34 @@ btnstart.onclick = async () => {
   const emb = await Webembot.create();
   currentDevice = emb;
   btnShowUuids.disabled = false;
+  
+  // LEDテストボタンを表示
+  document.getElementById('ledTest').style.display = 'block';
+  
+  // LED状態を追跡
+  const ledStates = { led1: false, led2: false, led3: false };
+  
+  // LEDボタンのイベントハンドラを作成する関数
+  const createLedHandler = (ledNumber) => {
+    return async () => {
+      try {
+        ledStates[`led${ledNumber}`] = !ledStates[`led${ledNumber}`];
+        await emb.led(ledNumber, ledStates[`led${ledNumber}`]);
+        document.getElementById(`led${ledNumber}`).textContent =
+          `LED${ledNumber} ${ledStates[`led${ledNumber}`] ? 'ON' : 'OFF'}`;
+      } catch (error) {
+        console.error(`LED${ledNumber}の制御に失敗:`, error);
+        alert(`LED${ledNumber}の制御に失敗しました`);
+      }
+    };
+  };
+
+  // 各LEDボタンにイベントハンドラを設定
+  for (let i = 1; i <= 3; i++) {
+    document.getElementById(`led${i}`).onclick = createLedHandler(i);
+    // 初期状態のボタンテキストを設定
+    document.getElementById(`led${i}`).textContent = `LED${i} OFF`;
+  }
 
   // for F503i
   emb.addKeyEventListener((keystate) => {
@@ -110,41 +143,7 @@ btnstart.onclick = async () => {
     clearInterval(updateInterval);
   });
   
-  if (emb.f503i) {
-    for (let i = 0;; i++) {
-      await emb.led(1, (i & 4) != 0);
-      await emb.led(2, (i & 2) != 0);
-      await emb.led(3, (i & 1) != 0);
-      await sleep(500);
-      console.log(i);
-    }
-  }
-  for (;;) {
-    await emb.led(1, true);
-    await emb.led(2, true);
-    await emb.led(3, true);
-    await emb.servo(1, 30);
-    await emb.servo(2, 0);
-    await emb.servo(3, 0);
-    if (chksound.checked) {
-      await emb.buzzer(61);
-    }  else {
-      await emb.buzzer(0);
-    }
-    await sleep(1000);
-    await emb.led(1, false);
-    await emb.led(2, false);
-    await emb.led(3, false);
-    await emb.servo(1, 0);
-    await emb.servo(2, 30);
-    await emb.servo(3, 30);
-    if (chksound.checked) {
-      await emb.buzzer(Math.random() * 100);
-    }  else {
-      await emb.buzzer(0);
-    }
-    await sleep(1000);
-  }
+  // デモモードは削除されました
 };
 
 btnShowUuids.onclick = async () => {

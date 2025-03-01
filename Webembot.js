@@ -56,6 +56,10 @@ export class Webembot {
         await service.getCharacteristic(uuid("e51a")),
         await service.getCharacteristic(uuid("e51b")),
       ];
+      // 初期化時に全LEDをOFFに設定
+      for (let i = 0; i < embot.leds.length; i++) {
+        await embot.writeBLE(embot.leds[i], 0);
+      }
     }
     if (!f503i) {
       embot.servos = [
@@ -155,14 +159,11 @@ export class Webembot {
       return;
     }
     const target = this.leds[id - 1];
-    await this.writeBLE(target, val ? 1 : 2);
-    /*
     if (this.f503i) {
       await this.writeBLE(target, val ? 1 : 0);
     } else {
       await this.writeBLE(target, val ? 1 : 2);
     }
-    */
   }
   async servo(id, val) { // id: 1-3, val: 0?
     if (this.f503i) {
