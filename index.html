@@ -1,26 +1,115 @@
 <!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><link rel="icon" href="data:">
 <title>Webembot demo</title>
+<style>
+  .uuid-table {
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 800px;
+    margin: 20px 0;
+  }
+  .uuid-table th, .uuid-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+  }
+  .uuid-table th {
+    background-color: #f5f5f5;
+  }
+  .uuid-info {
+    display: none;
+    margin: 20px 0;
+  }
+  .uuid-info.visible {
+    display: block;
+  }
+</style>
 </head><body>
 <h1>Webembot demo</h1>
 
-Webembot is a library for controlling <a href=https://www.embot.jp/>embot</a> over Bluetooth.<br>
+Webembot is a library for controlling <a href=https://www.embot.jp/>embot</a> over Bluetooth. (<a href="uuids.html">Bluetooth UUIDs一覧</a>)<br>
 <br>
 
-<button id=btnstart>connect and demo</button><br>
+<button id=btnstart>connect and demo</button>
+<button id="btnShowUuids" disabled>Show UUIDs</button><br>
 <label><input type=checkbox id=chksound>sound on</label><br>
 F503i keystate <input type=text id=inkey style="width: 6em;"><br>
+光センサー値: <span id="brightness">---</span> (<span id="brightLevel">---</span>)<br>
 
+<div id="uuidInfo" class="uuid-info">
+  <h2>接続中のデバイスのUUID情報</h2>
+  <table class="uuid-table">
+    <thead>
+      <tr>
+        <th>Short UUID</th>
+        <th>Full UUID</th>
+        <th>Properties</th>
+        <th>現在の値</th>
+      </tr>
+    </thead>
+    <tbody id="uuidTableBody">
+    </tbody>
+  </table>
+</div>
 
 <script type="module">
 import { Webembot } from "./Webembot.js";
 import { sleep } from "https://js.sabae.cc/sleep.js";
 
+let currentDevice = null;
+
 btnstart.onclick = async () => {
   const emb = await Webembot.create();
+  currentDevice = emb;
+  btnShowUuids.disabled = false;
+
   // for F503i
   emb.addKeyEventListener((keystate) => {
     inkey.value = keystate.toString(2);
   });
+  
+  // 光センサーの初期化
+  if (!await emb.initLightSensor()) {
+    console.error('光センサーの初期化に失敗しました');
+    alert('光センサーの初期化に失敗しました。ページを再読み込みして再試行してください。');
+    return;
+  }
+
+  let isUpdating = true;
+  
+  // 光センサーの値を定期的に更新
+  const updateBrightness = async () => {
+    if (!isUpdating) return;
+    
+    try {
+      const result = await emb.getBrightness();
+      brightness.textContent = result.brightness;
+      brightLevel.textContent = result.level;
+      
+      if (result.level === 'エラー') {
+        console.error('光センサーの読み取りに失敗しました');
+        isUpdating = false;
+        alert('光センサーの読み取りに失敗しました。ページを再読み込みして再試行してください。');
+        return;
+      }
+    } catch (error) {
+      console.error('光センサー更新エラー:', error);
+      isUpdating = false;
+      alert('光センサーの更新中にエラーが発生しました。ページを再読み込みして再試行してください。');
+      return;
+    }
+  };
+  
+  // 1秒ごとに光センサーの値を更新
+  const updateInterval = setInterval(updateBrightness, 1000);
+  // 初回読み取り
+  await updateBrightness();
+
+  // クリーンアップ関数の設定
+  window.addEventListener('beforeunload', () => {
+    isUpdating = false;
+    clearInterval(updateInterval);
+  });
+  
   if (emb.f503i) {
     for (let i = 0;; i++) {
       await emb.led(1, (i & 4) != 0);
@@ -55,6 +144,50 @@ btnstart.onclick = async () => {
       await emb.buzzer(0);
     }
     await sleep(1000);
+  }
+};
+
+btnShowUuids.onclick = async () => {
+  if (!currentDevice) {
+    alert('デバイスが接続されていません。');
+    return;
+  }
+
+  try {
+    const characteristics = await currentDevice.getCharacteristicsInfo();
+    const tableBody = document.getElementById('uuidTableBody');
+    tableBody.innerHTML = '';
+
+    characteristics.forEach(ch => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${ch.shortUuid}</td>
+        <td>${ch.uuid}</td>
+        <td>${ch.properties}</td>
+        <td>${ch.value}</td>
+      `;
+      tableBody.appendChild(row);
+    });
+
+    document.getElementById('uuidInfo').classList.add('visible');
+
+    // 値を定期的に更新（読み取り可能な特性のみ）
+    setInterval(async () => {
+      try {
+        const updatedCharacteristics = await currentDevice.getCharacteristicsInfo();
+        const rows = tableBody.getElementsByTagName('tr');
+        updatedCharacteristics.forEach((ch, index) => {
+          if (rows[index]) {
+            rows[index].cells[3].textContent = ch.value;
+          }
+        });
+      } catch (error) {
+        console.error('UUID値の更新に失敗しました:', error);
+      }
+    }, 1000);
+  } catch (error) {
+    console.error('UUID情報の取得に失敗しました:', error);
+    alert('UUID情報の取得に失敗しました。');
   }
 };
 </script>

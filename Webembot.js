@@ -35,30 +35,6 @@ export class Webembot {
         return ss.join(" ");
       };
       console.log(ruuid(ch.uuid), show(ch.properties));
-      /*
-        // led
-        e515 read writeWithoutResponse
-        e516 read writeWithoutResponse
-        e517 read writeWithoutResponse
-        e518 read writeWithoutResponse
-        e51a read writeWithoutResponse // right RED
-        e51b read writeWithoutResponse
-
-        // buzzer
-        e521 read writeWithoutResponse
-
-        // key status change -> 2byte // big endian #*9876543210 の順、12bit
-        e531 notify read
-
-        e532 notify read
-
-        e533 read write
-
-        e5e1 read
-        e5e2 read
-        e5e3 read
-        e5e4 read // ?, light sensor? 2byte
-      */
     }
     console.log();
     
@@ -92,7 +68,7 @@ export class Webembot {
     embot.buzzer1 = await service.getCharacteristic(uuid("e521"));
     //embot.other1 = await service.getCharacteristic(uuid("e525"));
     if (f503i) {
-      const uuidread = ["e515", "e516", "e533", "e5e1", "e5e2", "e5e3", "e5e4"];
+      const uuidread = ["e515", "e516", "e532", "e5e1", "e5e2", "e5e3", "e5e4"];
       embot.others = [];
       for (const i of uuidread) {
         const ch = await service.getCharacteristic(uuid(i));
@@ -100,6 +76,18 @@ export class Webembot {
       }
       for (const i of ["e531", "e532"]) {
         const ch = await service.getCharacteristic(uuid(i));
+        if (i === "e532") {
+          // 光センサーの初期化（f503iの場合のみ）
+          try {
+            console.log('光センサーの初期化を開始...');
+            const buf = new Uint8Array(1);
+            buf[0] = 2;  // モード2：連続読み取りモード
+            await ch.writeValueWithoutResponse(buf.buffer);
+            console.log('光センサーモードを設定しました');
+          } catch (error) {
+            console.error('光センサー初期化エラー:', error.name, error.message);
+          }
+        }
         ch.addEventListener('characteristicvaluechanged', async e => {
           const data = new Uint8Array(e.target.value.buffer);
           const n = (data[1] << 8) | data[0]; // data.length == 2
@@ -107,7 +95,7 @@ export class Webembot {
           //console.log('recv', i, n.toString(2)); // data.length, data);
           embot.setKeyState(n);
         });
-        ch.startNotifications();
+        await ch.startNotifications();
       }
     }
     return embot;
@@ -120,6 +108,55 @@ export class Webembot {
     this.f503i = f503i;
     this.keylisteners = [];
   }
+  async getCharacteristicsInfo() {
+    const characteristics = await this.service.getCharacteristics();
+    return await Promise.all(characteristics.map(async ch => {
+      const properties = [];
+      const propertyNames = [
+        "authenticatedSignedWrites",
+        "broadcast",
+        "indicate",
+        "notify",
+        "read",
+        "reliableWrite",
+        "writableAuxiliaries",
+        "write",
+        "writeWithoutResponse"
+      ];
+      
+      for (const name of propertyNames) {
+        if (ch.properties[name]) {
+          properties.push(name);
+        }
+      }
+
+      let value = "読み取り不可";
+      if (ch.properties.read) {
+        try {
+          const data = await ch.readValue();
+          if (data.buffer.byteLength === 1) {
+            value = new Uint8Array(data.buffer)[0].toString();
+          } else if (data.buffer.byteLength === 2) {
+            const bytes = new Uint8Array(data.buffer);
+            value = ((bytes[1] << 8) | bytes[0]).toString();
+          } else {
+            value = Array.from(new Uint8Array(data.buffer)).join(", ");
+          }
+        } catch (error) {
+          console.error(`UUID ${ch.uuid} の値の読み取りに失敗:`, error);
+          value = "エラー";
+        }
+      }
+
+      return {
+        uuid: ch.uuid,
+        shortUuid: ch.uuid.substring(4, 8),
+        properties: properties.join(", "),
+        value: value
+      };
+    }));
+  }
+
   async writeBLE(char, val) {
     const buf = new Uint8Array(1);
     buf[0] = parseInt(val);
@@ -170,35 +207,42 @@ export class Webembot {
       }
     }
   }
-  async initLightSensor() {
-    try {
-      // e533をモード2に設定
-      const e533 = await this.service.getCharacteristic(uuid("e533"));
-      const buf = new Uint8Array(1);
-      buf[0] = 2;  // モード2
-      await e533.writeValue(buf.buffer);
-      console.log('光センサーをモード2に初期化しました');
-      return true;
-    } catch (error) {
-      console.error('光センサー初期化エラー:', error);
-      return false;
-    }
-  }
-
   async getBrightness() {
+    if (!this.f503i) {
+      console.log('このデバイスは光センサーに対応していません');
+      return {
+        raw: [0, 0],
+        brightness: 0,
+        level: '非対応',
+        error: 'このデバイスは光センサーに対応していません'
+      };
+    }
+
     try {
-      // 明るさセンサー（e5e4）から直接読み取り
-      const data = await this.others[6].readValue();
+      // まず光センサー（e5e4）を取得
+      const lightSensor = await this.service.getCharacteristic(uuid("e5e4"));
+      console.log('光センサー特性を取得しました');
+
+      // 値を読み取る
+      const data = await lightSensor.readValue();
+      console.log('光センサーの値を読み取りました');
       const n = new Uint8Array(data.buffer);
+      console.log('生データ:', Array.from(n));
       
       // バッファの長さが2バイトであることを確認
       if (n.length !== 2) {
         console.error('不正なデータ長:', n.length, Array.from(n));
-        return { raw: [0, 0], brightness: 0, level: '不明' };
+        return {
+          raw: Array.from(n),
+          brightness: 0,
+          level: '不正なデータ',
+          error: `期待されるバイト長: 2, 実際のバイト長: ${n.length}`
+        };
       }
 
       // 第1バイトが光の強さを示す（0-255）
       const brightness = n[0];
+      console.log('光の強さ:', brightness);
       
       // 明るさレベルの判定
       let level;
@@ -211,11 +255,18 @@ export class Webembot {
       return {
         raw: Array.from(n),    // 生データ [光の強さ, 11]
         brightness: n[0],      // 光の強さ（0-255）
-        level                  // 人間が理解しやすい表現
+        level,                 // 人間が理解しやすい表現
+        error: null           // エラーなし
       };
     } catch (error) {
-      console.error('明るさ取得エラー:', error);
-      return { raw: [0, 0], brightness: 0, level: 'エラー' };
+      console.error('明るさ取得エラー:', error.name, error.message);
+      console.error('エラーの詳細:', error);
+      return {
+        raw: [0, 0],
+        brightness: 0,
+        level: 'エラー',
+        error: `${error.name}: ${error.message}`
+      };
     }
   }
   setKeyState(n) {
