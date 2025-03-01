@@ -98,6 +98,7 @@ export class Webembot {
     this.plus = plus;
     this.f503i = f503i;
     this.keylisteners = [];
+    this.ledStates = new Array(6).fill(false); // LED状態を保持する配列
   }
   async getCharacteristicsInfo() {
     const characteristics = await this.service.getCharacteristics();
@@ -147,10 +148,12 @@ export class Webembot {
       };
     }));
   }
-
-  async writeBLE(char, val) {
-    const buf = new Uint8Array(1);
-    buf[0] = parseInt(val);
+async writeBLE(char, val) {
+  console.log(`writeBLE called with value: ${val}`); // デバッグログ
+  const buf = new Uint8Array(1);
+  buf[0] = val === true ? 1 : (val === false ? 2 : parseInt(val));
+  console.log(`Writing to BLE: ${buf[0]}`); // デバッグログ
+  await char.writeValueWithoutResponse(buf.buffer);
     await char.writeValueWithoutResponse(buf.buffer);
   }
   async led(id, val) { // id: 1 or 2, val: true or false
@@ -158,12 +161,9 @@ export class Webembot {
       console.log("led " + id + " is not supported");
       return;
     }
+    console.log(`LED ${id} called with value: ${val}`); // デバッグログ
     const target = this.leds[id - 1];
-    if (this.f503i) {
-      await this.writeBLE(target, val ? 1 : 0);
-    } else {
-      await this.writeBLE(target, val ? 1 : 2);
-    }
+    await this.writeBLE(target, val); // booleanとして直接渡す
   }
   async servo(id, val) { // id: 1-3, val: 0?
     if (this.f503i) {
