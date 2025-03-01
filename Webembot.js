@@ -55,7 +55,9 @@ export class Webembot {
 
   async getCharacteristicsInfo() {
     const characteristics = await this.service.getCharacteristics();
-    return await Promise.all(characteristics.map(async ch => {
+    const results = [];
+
+    for (const ch of characteristics) {
       const properties = [];
       const propertyNames = [
         "authenticatedSignedWrites",
@@ -78,6 +80,8 @@ export class Webembot {
       let value = "読み取り不可";
       if (ch.properties.read) {
         try {
+          // 各特性の読み取り前に少し待機
+          await new Promise(resolve => setTimeout(resolve, 100));
           const data = await ch.readValue();
           if (data.buffer.byteLength === 1) {
             value = new Uint8Array(data.buffer)[0].toString();
@@ -93,12 +97,30 @@ export class Webembot {
         }
       }
 
-      return {
+      results.push({
         uuid: ch.uuid,
         shortUuid: ch.uuid.substring(4, 8),
         properties: properties.join(", "),
         value: value
-      };
-    }));
+      });
+    }
+
+    return results;
+  }
+
+  async writeCharacteristic(shortUuid, value) {
+    const characteristics = await this.service.getCharacteristics();
+    const characteristic = characteristics.find(ch => ch.uuid.substring(4, 8) === shortUuid);
+    
+    if (!characteristic) {
+      throw new Error(`特性が見つかりません: ${shortUuid}`);
+    }
+
+    if (!characteristic.properties.write && !characteristic.properties.writeWithoutResponse) {
+      throw new Error(`この特性は書き込みをサポートしていません: ${shortUuid}`);
+    }
+
+    const data = new Uint8Array([parseInt(value)]);
+    await characteristic.writeValue(data);
   }
 }

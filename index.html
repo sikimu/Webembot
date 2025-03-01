@@ -52,6 +52,7 @@ Webembot is a library for controlling <a href=https://www.embot.jp/>embot</a> ov
 import { Webembot } from "./Webembot.js";
 
 let currentDevice = null;
+let updateInterval = null;
 
 btnstart.onclick = async () => {
   const emb = await Webembot.create();
@@ -76,32 +77,109 @@ btnShowUuids.onclick = async () => {
         <td>${ch.shortUuid}</td>
         <td>${ch.uuid}</td>
         <td>${ch.properties}</td>
-        <td>${ch.value}</td>
+        <td>
+          ${ch.value}
+          ${ch.properties.includes('write') || ch.properties.includes('writeWithoutResponse') ? `
+            <div>
+              <input type="number" min="0" max="255" value="0" id="input-${ch.shortUuid}">
+              <button onclick="writeValue('${ch.shortUuid}')">書き込み</button>
+            </div>
+          ` : ''}
+        </td>
       `;
       tableBody.appendChild(row);
     });
 
     document.getElementById('uuidInfo').classList.add('visible');
 
+    // 前回の更新インターバルをクリア
+    if (updateInterval) {
+      clearInterval(updateInterval);
+    }
+
     // 値を定期的に更新（読み取り可能な特性のみ）
-    setInterval(async () => {
+    updateInterval = setInterval(async () => {
       try {
         const updatedCharacteristics = await currentDevice.getCharacteristicsInfo();
         const rows = tableBody.getElementsByTagName('tr');
         updatedCharacteristics.forEach((ch, index) => {
           if (rows[index]) {
-            rows[index].cells[3].textContent = ch.value;
+            const cell = rows[index].cells[3];
+            // 入力フィールドとボタンを保持するため、値のテキストノードのみを更新
+            const valueNode = Array.from(cell.childNodes).find(node => node.nodeType === Node.TEXT_NODE);
+            if (valueNode) {
+              valueNode.textContent = ch.value;
+            } else {
+              cell.insertBefore(document.createTextNode(ch.value), cell.firstChild);
+            }
           }
         });
       } catch (error) {
         console.error('UUID値の更新に失敗しました:', error);
       }
-    }, 1000);
+    }, 3000); // 更新間隔を3秒に延長
   } catch (error) {
     console.error('UUID情報の取得に失敗しました:', error);
     alert('UUID情報の取得に失敗しました。');
   }
 };
+
+// グローバルスコープで関数を利用できるようにする
+window.writeValue = async function(shortUuid) {
+  if (!currentDevice) {
+    alert('デバイスが接続されていません。');
+    return;
+  }
+
+  const input = document.getElementById(`input-${shortUuid}`);
+  const value = input.value;
+
+  if (value === '' || isNaN(value) || value < 0 || value > 255) {
+    alert('0から255までの値を入力してください。');
+    return;
+  }
+
+  // 定期更新を一時停止
+  const currentInterval = updateInterval;
+  if (updateInterval) {
+    clearInterval(updateInterval);
+    updateInterval = null;
+  }
+
+  try {
+    // 書き込み前に少し待機
+    await new Promise(resolve => setTimeout(resolve, 100));
+    await currentDevice.writeCharacteristic(shortUuid, value);
+    alert('書き込みが完了しました。');
+  } catch (error) {
+    console.error('書き込みに失敗しました:', error);
+    alert(`書き込みに失敗しました: ${error.message}`);
+  } finally {
+    // 書き込み完了後、定期更新を再開
+    if (currentInterval) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      updateInterval = setInterval(async () => {
+        try {
+          const updatedCharacteristics = await currentDevice.getCharacteristicsInfo();
+          const rows = document.getElementById('uuidTableBody').getElementsByTagName('tr');
+          updatedCharacteristics.forEach((ch, index) => {
+            if (rows[index]) {
+              const cell = rows[index].cells[3];
+              const valueNode = Array.from(cell.childNodes).find(node => node.nodeType === Node.TEXT_NODE);
+              if (valueNode) {
+                valueNode.textContent = ch.value;
+              } else {
+                cell.insertBefore(document.createTextNode(ch.value), cell.firstChild);
+              }
+            }
+          });
+        } catch (error) {
+          console.error('UUID値の更新に失敗しました:', error);
+        }
+      }, 3000);
+    }
+  }
+}
 </script>
 
 <hr>

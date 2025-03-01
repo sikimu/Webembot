@@ -1,0 +1,83 @@
+Webembot.js:39 e515 read writeWithoutResponse
+Webembot.js:39 e516 read writeWithoutResponse
+Webembot.js:39 e517 read writeWithoutResponse
+Webembot.js:39 e518 read writeWithoutResponse
+Webembot.js:39 e51a read writeWithoutResponse
+Webembot.js:39 e51b read writeWithoutResponse
+Webembot.js:39 e521 read writeWithoutResponse
+Webembot.js:39 e531 notify read
+Webembot.js:39 e532 notify read
+Webembot.js:39 e533 read write
+Webembot.js:39 e5e1 read
+Webembot.js:39 e5e2 read
+Webembot.js:39 e5e3 read
+Webembot.js:39 e5e4 read
+Webembot.js:91 UUID f7fce5e3-7a0b-4b89-a675-a79137223e2c の値の読み取りに失敗: NetworkError: GATT operation already in progress.
+(anonymous) @ Webembot.js:91
+await in (anonymous)
+getCharacteristicsInfo @ Webembot.js:58
+await in getCharacteristicsInfo
+(anonymous) @ (index):97
+setInterval
+btnShowUuids.onclick @ (index):95
+Webembot.js:91 UUID f7fce5e4-7a0b-4b89-a675-a79137223e2c の値の読み取りに失敗: NetworkError: GATT operation already in progress.
+(anonymous) @ Webembot.js:91
+await in (anonymous)
+getCharacteristicsInfo @ Webembot.js:58
+await in getCharacteristicsInfo
+(anonymous) @ (index):97
+setInterval
+btnShowUuids.onclick @ (index):95
+Webembot.js:91 UUID f7fce5e3-7a0b-4b89-a675-a79137223e2c の値の読み取りに失敗: NetworkError: GATT operation already in progress.
+(anonymous) @ Webembot.js:91
+await in (anonymous)
+getCharacteristicsInfo @ Webembot.js:58
+await in getCharacteristicsInfo
+(anonymous) @ (index):97
+setInterval
+btnShowUuids.onclick @ (index):95
+Webembot.js:91 UUID f7fce5e4-7a0b-4b89-a675-a79137223e2c の値の読み取りに失敗: NetworkError: GATT operation already in progress.
+(anonymous) @ Webembot.js:91
+await in (anonymous)
+getCharacteristicsInfo @ Webembot.js:58
+await in getCharacteristicsInfo
+(anonymous) @ (index):97
+setInterval
+btnShowUuids.onclick @ (index):95
+(index):1 Uncaught ReferenceError: writeValue is not defined
+    at HTMLButtonElement.onclick ((index):1:1)
+onclick @ (index):1
+Webembot.js:91 UUID f7fce5e4-7a0b-4b89-a675-a79137223e2c の値の読み取りに失敗: NetworkError: GATT operation already in progress.
+(anonymous) @ Webembot.js:91
+await in (anonymous)
+getCharacteristicsInfo @ Webembot.js:58
+await in getCharacteristicsInfo
+(anonymous) @ (index):97
+setInterval
+btnShowUuids.onclick @ (index):95
+(index):1 Uncaught ReferenceError: writeValue is not defined
+    at HTMLButtonElement.onclick ((index):1:1)
+onclick @ (index):1
+(index):1 Uncaught ReferenceError: writeValue is not defined
+    at HTMLButtonElement.onclick ((index):1:1)
+onclick @ (index):1
+Webembot.js:91 UUID f7fce5e4-7a0b-4b89-a675-a79137223e2c の値の読み取りに失敗: NetworkError: GATT operation already in progress.
+(anonymous) @ Webembot.js:91
+await in (anonymous)
+getCharacteristicsInfo @ Webembot.js:58
+await in getCharacteristicsInfo
+(anonymous) @ (index):97
+setInterval
+btnShowUuids.onclick @ (index):95
+(index):1 Uncaught ReferenceError: writeValue is not defined
+    at HTMLButtonElement.onclick ((index):1:1)
+onclick @ (index):1
+(index):1 Uncaught ReferenceError: writeValue is not defined
+    at HTMLButtonElement.onclick ((index):1:1)
+onclick @ (index):1
+(index):1 Uncaught ReferenceError: writeValue is not defined
+    at HTMLButtonElement.onclick ((index):1:1)
+onclick @ (index):1
+(index):1 Uncaught ReferenceError: writeValue is not defined
+    at HTMLButtonElement.onclick ((index):1:1)
+onclick @ (index):1
