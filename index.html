@@ -31,14 +31,6 @@ Webembot is a library for controlling <a href=https://www.embot.jp/>embot</a> ov
 
 <button id=btnstart>デバイスに接続</button>
 <button id="btnShowUuids" disabled>Show UUIDs</button><br>
-<div id="ledTest" style="margin-top: 10px; display: none;">
-  <button id="led1">LED1 ON/OFF</button>
-  <button id="led2">LED2 ON/OFF</button>
-  <button id="led3">LED3 ON/OFF</button>
-</div><br>
-<label><input type=checkbox id=chksound>sound on</label><br>
-F503i keystate <input type=text id=inkey style="width: 6em;"><br>
-光センサー値: <span id="brightness">---</span> (<span id="brightLevel">---</span>)<br>
 
 <div id="uuidInfo" class="uuid-info">
   <h2>接続中のデバイスのUUID情報</h2>
@@ -58,7 +50,6 @@ F503i keystate <input type=text id=inkey style="width: 6em;"><br>
 
 <script type="module">
 import { Webembot } from "./Webembot.js";
-import { sleep } from "https://js.sabae.cc/sleep.js";
 
 let currentDevice = null;
 
@@ -66,84 +57,6 @@ btnstart.onclick = async () => {
   const emb = await Webembot.create();
   currentDevice = emb;
   btnShowUuids.disabled = false;
-  
-  // LEDテストボタンを表示
-  document.getElementById('ledTest').style.display = 'block';
-  
-  // LED状態を追跡
-  const ledStates = { led1: false, led2: false, led3: false };
-  
-  // LEDボタンのイベントハンドラを作成する関数
-  const createLedHandler = (ledNumber) => {
-    return async () => {
-      try {
-        ledStates[`led${ledNumber}`] = !ledStates[`led${ledNumber}`];
-        await emb.led(ledNumber, ledStates[`led${ledNumber}`]);
-        document.getElementById(`led${ledNumber}`).textContent =
-          `LED${ledNumber} ${ledStates[`led${ledNumber}`] ? 'ON' : 'OFF'}`;
-      } catch (error) {
-        console.error(`LED${ledNumber}の制御に失敗:`, error);
-        alert(`LED${ledNumber}の制御に失敗しました`);
-      }
-    };
-  };
-
-  // 各LEDボタンにイベントハンドラを設定
-  for (let i = 1; i <= 3; i++) {
-    document.getElementById(`led${i}`).onclick = createLedHandler(i);
-    // 初期状態のボタンテキストを設定
-    document.getElementById(`led${i}`).textContent = `LED${i} OFF`;
-  }
-
-  // for F503i
-  emb.addKeyEventListener((keystate) => {
-    inkey.value = keystate.toString(2);
-  });
-  
-  // 光センサーの初期化
-  if (!await emb.initLightSensor()) {
-    console.error('光センサーの初期化に失敗しました');
-    alert('光センサーの初期化に失敗しました。ページを再読み込みして再試行してください。');
-    return;
-  }
-
-  let isUpdating = true;
-  
-  // 光センサーの値を定期的に更新
-  const updateBrightness = async () => {
-    if (!isUpdating) return;
-    
-    try {
-      const result = await emb.getBrightness();
-      brightness.textContent = result.brightness;
-      brightLevel.textContent = result.level;
-      
-      if (result.level === 'エラー') {
-        console.error('光センサーの読み取りに失敗しました');
-        isUpdating = false;
-        alert('光センサーの読み取りに失敗しました。ページを再読み込みして再試行してください。');
-        return;
-      }
-    } catch (error) {
-      console.error('光センサー更新エラー:', error);
-      isUpdating = false;
-      alert('光センサーの更新中にエラーが発生しました。ページを再読み込みして再試行してください。');
-      return;
-    }
-  };
-  
-  // 1秒ごとに光センサーの値を更新
-  const updateInterval = setInterval(updateBrightness, 1000);
-  // 初回読み取り
-  await updateBrightness();
-
-  // クリーンアップ関数の設定
-  window.addEventListener('beforeunload', () => {
-    isUpdating = false;
-    clearInterval(updateInterval);
-  });
-  
-  // デモモードは削除されました
 };
 
 btnShowUuids.onclick = async () => {
