@@ -37,12 +37,12 @@ export class Webembot {
       console.log(ruuid(ch.uuid), show(ch.properties));
       /*
         // led
-        e515 read writeWithoutResponse // green (left)
-        e516 read writeWithoutResponse // yellow (center)
-        e517 read writeWithoutResponse // brightness green
-        e518 read writeWithoutResponse // brightness yellow
-        e51a read writeWithoutResponse // red (right)
-        e51b read writeWithoutResponse // brightness red
+        e515 read writeWithoutResponse
+        e516 read writeWithoutResponse
+        e517 read writeWithoutResponse
+        e518 read writeWithoutResponse
+        e51a read writeWithoutResponse // right RED
+        e51b read writeWithoutResponse
 
         // buzzer
         e521 read writeWithoutResponse
@@ -74,9 +74,9 @@ export class Webembot {
       embot.leds = [
         await service.getCharacteristic(uuid("e515")),
         await service.getCharacteristic(uuid("e516")),
-        await service.getCharacteristic(uuid("e51a")),
         await service.getCharacteristic(uuid("e517")),
         await service.getCharacteristic(uuid("e518")),
+        await service.getCharacteristic(uuid("e51a")),
         await service.getCharacteristic(uuid("e51b")),
       ];
     }
@@ -110,13 +110,6 @@ export class Webembot {
         ch.startNotifications();
       }
     }
-    if (f503i) {
-      const brightness = 255;
-      const emb = embot;
-      await emb.writeBLE(emb.leds[3], brightness);
-      await emb.writeBLE(emb.leds[4], brightness);
-      await emb.writeBLE(emb.leds[5], brightness);
-    }
     return embot;
   }
   constructor(device, server, service, plus, f503i) {
@@ -132,28 +125,20 @@ export class Webembot {
     buf[0] = parseInt(val);
     await char.writeValueWithoutResponse(buf.buffer);
   }
-  async setBrightness(id, val) { // for F503i, id: if 0 all
-    if (!this.f503i || id < 1 || id > this.leds.length) {
-      console.log("led " + id + " is not supported brightness");
-      return;
-    }
-    const emb = this;
-    const brightness = val;
-    if (id) {
-      await emb.writeBLE(emb.leds[3 + id - 1], brightness);
-    } else {
-      await emb.writeBLE(emb.leds[3], brightness);
-      await emb.writeBLE(emb.leds[4], brightness);
-      await emb.writeBLE(emb.leds[5], brightness);
-    }
-  }
-  async led(id, val) { // id: 1-3, val: true or false
+  async led(id, val) { // id: 1 or 2, val: true or false
     if (id < 1 || id > this.leds.length) {
       console.log("led " + id + " is not supported");
       return;
     }
     const target = this.leds[id - 1];
     await this.writeBLE(target, val ? 1 : 2);
+    /*
+    if (this.f503i) {
+      await this.writeBLE(target, val ? 1 : 0);
+    } else {
+      await this.writeBLE(target, val ? 1 : 2);
+    }
+    */
   }
   async servo(id, val) { // id: 1-3, val: 0?
     if (this.f503i) {
@@ -174,19 +159,64 @@ export class Webembot {
   }
   async readAll() {
     for (let i = 0; i < this.others.length; i++) {
-      const ch = this.others[i];
-      const data = await ch.readValue();
-      const n = new Uint8Array(data.buffer);
-      console.log(i, n.length, n);
+      try {
+        const ch = this.others[i];
+        const data = await ch.readValue();
+        const n = new Uint8Array(data.buffer);
+        const value = (n[1] << 8) | n[0];
+        console.log(`センサー[${i}] UUID:${ch.uuid}, 値:${value}, RAWデータ:`, Array.from(n));
+      } catch (error) {
+        console.error(`センサー[${i}]読み取りエラー:`, error);
+      }
     }
   }
+  async initLightSensor() {
+    try {
+      // e533をモード2に設定
+      const e533 = await this.service.getCharacteristic(uuid("e533"));
+      const buf = new Uint8Array(1);
+      buf[0] = 2;  // モード2
+      await e533.writeValue(buf.buffer);
+      console.log('光センサーをモード2に初期化しました');
+      return true;
+    } catch (error) {
+      console.error('光センサー初期化エラー:', error);
+      return false;
+    }
+  }
+
   async getBrightness() {
-    await this.writeBLE(this.others[2], 1);
-    const ch = this.others[0];
-    const data = await ch.readValue();
-    const n = new Uint8Array(data.buffer);
-    const res = (n[1] << 8) | n[0];
-    return res;
+    try {
+      // 明るさセンサー（e5e4）から直接読み取り
+      const data = await this.others[6].readValue();
+      const n = new Uint8Array(data.buffer);
+      
+      // バッファの長さが2バイトであることを確認
+      if (n.length !== 2) {
+        console.error('不正なデータ長:', n.length, Array.from(n));
+        return { raw: [0, 0], brightness: 0, level: '不明' };
+      }
+
+      // 第1バイトが光の強さを示す（0-255）
+      const brightness = n[0];
+      
+      // 明るさレベルの判定
+      let level;
+      if (brightness < 50) level = '非常に暗い';
+      else if (brightness < 100) level = '暗い';
+      else if (brightness < 150) level = 'やや暗い';
+      else if (brightness < 200) level = '明るい';
+      else level = '非常に明るい';
+
+      return {
+        raw: Array.from(n),    // 生データ [光の強さ, 11]
+        brightness: n[0],      // 光の強さ（0-255）
+        level                  // 人間が理解しやすい表現
+      };
+    } catch (error) {
+      console.error('明るさ取得エラー:', error);
+      return { raw: [0, 0], brightness: 0, level: 'エラー' };
+    }
   }
   setKeyState(n) {
     this.keystate = n;
