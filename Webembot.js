@@ -110,6 +110,13 @@ export class Webembot {
         ch.startNotifications();
       }
     }
+    if (f503i) {
+      const brightness = 255;
+      const emb = embot;
+      await emb.writeBLE(emb.leds[3], brightness);
+      await emb.writeBLE(emb.leds[4], brightness);
+      await emb.writeBLE(emb.leds[5], brightness);
+    }
     return embot;
   }
   constructor(device, server, service, plus, f503i) {
@@ -125,17 +132,25 @@ export class Webembot {
     buf[0] = parseInt(val);
     await char.writeValueWithoutResponse(buf.buffer);
   }
-  async ledn(id, val) { // id: 1-3, val: n
-    const target = this.leds[id - 1];
-    await this.writeBLE(target, val);
+  async setBrightness(id, val) { // for F503i, id: if 0 all
+    if (!this.f503i || id < 1 || id > this.leds.length) {
+      console.log("led " + id + " is not supported brightness");
+      return;
+    }
+    const emb = this;
+    const brightness = val;
+    if (id) {
+      await emb.writeBLE(emb.leds[3 + id - 1], brightness);
+    } else {
+      await emb.writeBLE(emb.leds[3], brightness);
+      await emb.writeBLE(emb.leds[4], brightness);
+      await emb.writeBLE(emb.leds[5], brightness);
+    }
   }
   async led(id, val) { // id: 1-3, val: true or false
     if (id < 1 || id > this.leds.length) {
       console.log("led " + id + " is not supported");
       return;
-    }
-    if (this.f503i) {
-      await this.writeBLE(this.leds[id - 1 + 3], 255);
     }
     const target = this.leds[id - 1];
     await this.writeBLE(target, val ? 1 : 2);
