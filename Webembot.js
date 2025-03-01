@@ -42,10 +42,11 @@ export class Webembot {
     const plus = device.name.startsWith("EMBOTPLUS_");
     const f503i = device.name.startsWith("F503i_");
     const embot = new Webembot(device, server, service, plus, f503i);
-    if (!f503i) {
+    if (f503i) {
       embot.leds = [
         await service.getCharacteristic(uuid("e515")),
         await service.getCharacteristic(uuid("e516")),
+        await service.getCharacteristic(uuid("e517")),
       ];
     } else {
       embot.leds = [
